@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MVP King — Проверьте свою идею за $2000</title>
+<!--
+  MVP King — лендинг. Один файл, 2 блока (fullPage-пейджинг).
+  Стиль: кинетическая типографика, тёмная сцена, акцент #c6ff3a.
+  Живость: спотлайт за курсором + параллакс строк. Без 3D/WebGL.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300..600&display=swap" rel="stylesheet" />
+<style>
+  :root{ --acid:#c6ff3a; --ink:#0a0a0b; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  /* fullPage-пейджинг: один скролл = плавный переезд на соседний экран, без остановок посередине.
+     Логика в JS; здесь только плавность. scroll-snap отключён намеренно. */
+  html{scroll-behavior:smooth}
+  body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--ink);color:#fff;
+    overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit}
+
+  /* живой свет за курсором — концентрация на фоне */
+  .spot{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(600px circle at var(--mx,50%) var(--my,30%),
+      rgba(198,255,58,.10), transparent 65%);transition:background .12s linear}
+  /* grain */
+  body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* marquee — фиксирован сверху, чтобы не сбивать snap-поток */
+  .marquee{position:fixed;top:0;left:0;right:0;height:48px;display:flex;align-items:center;
+    z-index:40;overflow:hidden;white-space:nowrap;background:var(--ink);
+    border-bottom:1px solid #1c1c1c}
+  .marquee div{display:inline-block;animation:scroll 26s linear infinite;
+    font-family:'Inter';font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#444}
+  .marquee span{margin:0 26px}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* блок 1 */
+  .hero{position:relative;z-index:2;min-height:100vh;
+    display:flex;flex-direction:column;justify-content:center;padding:6vw;padding-top:calc(6vw + 48px)}
+  .kick{font-family:'Inter';letter-spacing:.3em;text-transform:uppercase;font-size:12px;color:#666;margin-bottom:26px}
+  h1{font-size:clamp(44px,11vw,168px);line-height:.9;letter-spacing:-.045em;font-weight:600}
+  h1 .line{display:block;will-change:transform}
+  h1 .accent{color:var(--acid)}
+  .meta{margin-top:44px;display:flex;gap:48px;flex-wrap:wrap;font-family:'Inter';font-size:13px;color:#777}
+  .meta b{display:block;color:#fff;font-size:21px;font-weight:600;margin-bottom:4px}
+  /* ===== CTA: скошенная кнопка с мигающими шевронами
+     (адаптировано из codepen folaad/YvmRpz под наш стиль) ===== */
+  .btn{
+    display:inline-flex;align-items:center;gap:14px;cursor:pointer;border:0;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;
+    padding:16px 34px;font-size:20px;letter-spacing:.02em;
+    color:#000;background:var(--acid);
+    text-transform:uppercase;
+    box-shadow:6px 6px 0 #fff;
+    transform:skewX(-12deg);
+    transition:box-shadow .4s, transform .4s, padding .4s;
+  }
+  .btn > *{transform:skewX(12deg)} /* контент держим прямо */
+  .btn .arrows{display:flex;width:34px;height:22px;position:relative}
+  .btn .arrows svg{width:100%;height:100%}
+  /* заливка-кнопка (блок 2, зелёный фон): тень белая → на hover чёрная (контраст на зелёном) */
+  .btn:hover{box-shadow:10px 10px 0 #000;padding-right:54px}
+  .btn:active{box-shadow:3px 3px 0 #000;transform:skewX(-12deg) translate(3px,3px)}
+  /* тёмная вариация (блок 1, тёмный фон): тень зелёная → на hover белая */
+  .btn.ghost{background:#16170f;color:#fff;box-shadow:6px 6px 0 var(--acid)}
+  .btn.ghost:hover{box-shadow:10px 10px 0 #fff;padding-right:54px}
+  .btn.ghost:active{box-shadow:3px 3px 0 #fff;transform:skewX(-12deg) translate(3px,3px)}
+
+  /* шевроны: 3 стрелки, на hover собираются и мигают по очереди.
+     палитра только бел⇄зелёный — никакого чёрного/серого */
+  .btn .arrows path{fill:#000;transition:.4s}        /* на зелёной кнопке стрелки чёрные читаемы как текст */
+  .btn.ghost .arrows path{fill:#fff}
+  .btn .arrows path.one{transform:translateX(-60%)}
+  .btn .arrows path.two{transform:translateX(-30%)}
+  .btn:hover .arrows path.one{transform:translateX(0)}
+  .btn:hover .arrows path.two{transform:translateX(0)}
+  /* блок 2 (зелёная): стрелки мигают чёрный⇄белый */
+  .btn:hover .arrows path.one{animation:chevB 1s infinite .6s}
+  .btn:hover .arrows path.two{animation:chevB 1s infinite .4s}
+  .btn:hover .arrows path.three{animation:chevB 1s infinite .2s}
+  @keyframes chevB{0%{fill:#000}50%{fill:#fff}100%{fill:#000}}
+  /* блок 1 (тёмная): стрелки мигают бел⇄зелёный */
+  .btn.ghost:hover .arrows path.one{animation:chevG 1s infinite .6s}
+  .btn.ghost:hover .arrows path.two{animation:chevG 1s infinite .4s}
+  .btn.ghost:hover .arrows path.three{animation:chevG 1s infinite .2s}
+  @keyframes chevG{0%{fill:#fff}50%{fill:var(--acid)}100%{fill:#fff}}
+
+  .hero .btn{margin-top:48px;align-self:flex-start}
+
+  /* блок 2 — гигантский текст + CTA */
+  .b2{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;
+    justify-content:center;padding:6vw;border-top:1px solid #1c1c1c}
+  .b2 h2{font-size:clamp(52px,15vw,230px);line-height:.86;letter-spacing:-.05em;font-weight:600;text-transform:uppercase}
+  .b2 h2 .accent{color:var(--acid)}
+  .b2 .sub{margin-top:34px;font-family:'Inter';color:#888;font-size:clamp(15px,1.5vw,19px);max-width:520px;line-height:1.6}
+  .b2 .btn{margin-top:42px;align-self:flex-start}
+
+  /* кастомный курсор (десктоп) */
+  .cursor{position:fixed;top:0;left:0;z-index:60;width:30px;height:30px;border:1px solid var(--acid);
+    border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);
+    transition:width .25s,height .25s,background .25s;mix-blend-mode:difference}
+  .cursor.big{width:60px;height:60px;background:rgba(198,255,58,.12)}
+  @media (hover:none){ .cursor,.spot{display:none} }
+
+  /* ===== модалка — в стиле лендинга (скос, offset-тень, зелёный/белый, аппёркейс) ===== */
+  #modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+    padding:6vw;background:rgba(6,6,7,.82);backdrop-filter:blur(10px);font-family:'Space Grotesk',sans-serif}
+  #modal.show{display:flex;animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  #modal .card{position:relative;background:#0f1009;border:1px solid #262a18;
+    padding:40px;width:min(92vw,440px);box-shadow:14px 14px 0 var(--acid);
+    animation:cardIn .35s cubic-bezier(.2,.9,.25,1)}
+  @keyframes cardIn{from{opacity:0;transform:skewX(-4deg) translateY(20px)}to{opacity:1;transform:none}}
+  #modal .label{font-family:'Inter';letter-spacing:.3em;text-transform:uppercase;font-size:11px;color:#6a6f4a;margin-bottom:14px}
+  #modal h3{font-family:'Space Grotesk',sans-serif;font-size:clamp(26px,4vw,38px);font-weight:600;text-transform:uppercase;letter-spacing:-.02em;line-height:.95;margin-bottom:8px}
+  #modal h3 .accent{color:var(--acid)}
+  #modal p{font-family:'Inter';color:#7c7f66;font-size:14px;line-height:1.5;margin-bottom:28px}
+  /* опции — скошенные кнопки как CTA */
+  #modal .opt{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+    margin-bottom:14px;padding:16px 22px;cursor:pointer;border:0;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;text-transform:uppercase;letter-spacing:.02em;
+    transform:skewX(-10deg);transition:box-shadow .35s,transform .35s,padding .35s}
+  #modal .opt > *{transform:skewX(10deg);font-family:'Space Grotesk',sans-serif}
+  #modal .opt .ar{font-size:18px}
+  #modal .opt.tg{background:var(--acid);color:#000;box-shadow:6px 6px 0 #fff}
+  #modal .opt.tg:hover{box-shadow:10px 10px 0 #000;padding-right:30px}
+  #modal .opt.form{background:transparent;color:#fff;box-shadow:6px 6px 0 var(--acid)}
+  #modal .opt.form:hover{box-shadow:10px 10px 0 #fff;padding-right:30px}
+  #modal .close{position:absolute;top:14px;right:18px;background:none;border:0;color:#5a5d44;
+    cursor:pointer;font-size:22px;line-height:1;transition:color .2s;z-index:2}
+  #modal .close:hover{color:var(--acid)}
+  /* экраны модалки: показываем по data-screen */
+  #modal .screen{display:none;animation:fadeIn .25s ease}
+  #modal[data-screen="choice"] .screen.choice{display:block}
+  #modal[data-screen="form"]   .screen.form{display:block}
+  #modal[data-screen="done"]   .screen.done{display:block}
+  /* кнопка назад */
+  #modal .back{background:none;border:0;color:#6a6f4a;cursor:pointer;font-family:'Inter';
+    font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;padding:0;transition:color .2s}
+  #modal .back:hover{color:var(--acid)}
+  /* поля формы — тёмные, прямые, зелёная фокус-обводка */
+  #modal .field{display:block;margin-bottom:16px}
+  #modal .field > span{display:block;font-family:'Inter';font-size:11px;letter-spacing:.15em;
+    text-transform:uppercase;color:#6a6f4a;margin-bottom:7px}
+  #modal .field input,#modal .field textarea{width:100%;background:#16170f;border:1px solid #2c3019;
+    color:#fff;font-family:'Inter';font-size:15px;padding:13px 15px;outline:none;resize:none;
+    transition:border-color .2s,box-shadow .2s}
+  #modal .field input::placeholder,#modal .field textarea::placeholder{color:#54573e}
+  #modal .field input:focus,#modal .field textarea:focus{border-color:var(--acid);box-shadow:0 0 0 1px var(--acid)}
+  #modal .form .opt{margin-top:6px}
+  /* экран спасибо */
+  #modal .done{text-align:left}
+  #modal .check{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;
+    background:var(--acid);color:#000;font-size:30px;font-weight:700;margin-bottom:18px;transform:skewX(-10deg)}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="spot"></div>
+<div class="cursor"></div>
+
+<div class="marquee"><div>
+  <span>MVP ЗА $2000</span><span>•</span><span>РАБОЧИЙ ПРОДУКТ</span><span>•</span><span>ТОЧКА РАЗВИТИЯ</span><span>•</span><span>ВЕБ · БЭК · МОБИЛКА · ИИ</span><span>•</span>
+  <span>MVP ЗА $2000</span><span>•</span><span>РАБОЧИЙ ПРОДУКТ</span><span>•</span><span>ТОЧКА РАЗВИТИЯ</span><span>•</span><span>ВЕБ · БЭК · МОБИЛКА · ИИ</span><span>•</span>
+</div></div>
+
+<!-- блок 1 -->
+<section class="hero">
+  <div class="kick">MVP King</div>
+  <h1>
+    <span class="line">Проверьте свою</span>
+    <span class="line">идею за <span class="accent">$2000.</span></span>
+  </h1>
+  <div class="meta">
+    <div><b>2–3 недели</b>от идеи до прода</div>
+    <div><b>Один человек</b>весь срез продукта</div>
+    <div><b>Рабочий MVP</b>точка развития</div>
+  </div>
+  <button class="btn ghost" data-cta>
+    <span>Связаться</span>
+    <span class="arrows">
+      <svg viewBox="0 0 66 43" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" fill-rule="evenodd">
+          <path class="one" d="M40.15,3.89 L43.98,0.14 C44.17,-0.05 44.48,-0.05 44.68,0.14 L65.69,20.78 C66.09,21.17 66.09,21.81 65.70,22.2 L44.68,42.86 C44.48,43.05 44.17,43.05 43.98,42.86 L40.15,39.11 C39.96,38.91 39.95,38.6 40.15,38.39 L56.99,21.86 C57.19,21.66 57.19,21.35 57.0,21.15 L40.15,4.61 C39.96,4.41 39.95,4.1 40.15,3.9 Z"/>
+          <path class="two" d="M20.15,3.89 L23.98,0.14 C24.17,-0.05 24.48,-0.05 24.68,0.14 L45.69,20.78 C46.09,21.17 46.09,21.81 45.70,22.2 L24.68,42.86 C24.48,43.05 24.17,43.05 23.98,42.86 L20.15,39.11 C19.96,38.91 19.95,38.6 20.15,38.39 L36.99,21.86 C37.19,21.66 37.19,21.35 37.0,21.15 L20.15,4.61 C19.96,4.41 19.95,4.1 20.15,3.9 Z"/>
+          <path class="three" d="M0.15,3.89 L3.98,0.14 C4.17,-0.05 4.48,-0.05 4.68,0.14 L25.69,20.78 C26.09,21.17 26.09,21.81 25.70,22.2 L4.68,42.86 C4.48,43.05 4.17,43.05 3.98,42.86 L0.15,39.11 C-0.04,38.91 -0.05,38.6 0.15,38.39 L16.99,21.86 C17.19,21.66 17.19,21.35 17.0,21.15 L0.15,4.61 C-0.04,4.41 -0.05,4.1 0.15,3.9 Z"/>
+        </g>
+      </svg>
+    </span>
+  </button>
+</section>
+
+<!-- блок 2 -->
+<section class="b2">
+  <h2>Давайте<br><span class="accent">обсудим.</span></h2>
+  <p class="sub">У вас есть идея — у меня есть способ проверить её на реальном продукте за $2000. Дальше решим на созвоне.</p>
+  <button class="btn" data-cta>
+    <span>Связаться</span>
+    <span class="arrows">
+      <svg viewBox="0 0 66 43" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" fill-rule="evenodd">
+          <path class="one" d="M40.15,3.89 L43.98,0.14 C44.17,-0.05 44.48,-0.05 44.68,0.14 L65.69,20.78 C66.09,21.17 66.09,21.81 65.70,22.2 L44.68,42.86 C44.48,43.05 44.17,43.05 43.98,42.86 L40.15,39.11 C39.96,38.91 39.95,38.6 40.15,38.39 L56.99,21.86 C57.19,21.66 57.19,21.35 57.0,21.15 L40.15,4.61 C39.96,4.41 39.95,4.1 40.15,3.9 Z"/>
+          <path class="two" d="M20.15,3.89 L23.98,0.14 C24.17,-0.05 24.48,-0.05 24.68,0.14 L45.69,20.78 C46.09,21.17 46.09,21.81 45.70,22.2 L24.68,42.86 C24.48,43.05 24.17,43.05 23.98,42.86 L20.15,39.11 C19.96,38.91 19.95,38.6 20.15,38.39 L36.99,21.86 C37.19,21.66 37.19,21.35 37.0,21.15 L20.15,4.61 C19.96,4.41 19.95,4.1 20.15,3.9 Z"/>
+          <path class="three" d="M0.15,3.89 L3.98,0.14 C4.17,-0.05 4.48,-0.05 4.68,0.14 L25.69,20.78 C26.09,21.17 26.09,21.81 25.70,22.2 L4.68,42.86 C4.48,43.05 4.17,43.05 3.98,42.86 L0.15,39.11 C-0.04,38.91 -0.05,38.6 0.15,38.39 L16.99,21.86 C17.19,21.66 17.19,21.35 17.0,21.15 L0.15,4.61 C-0.04,4.41 -0.05,4.1 0.15,3.9 Z"/>
+        </g>
+      </svg>
+    </span>
+  </button>
+</section>
+
+<!-- модалка -->
+<div id="modal" data-screen="choice">
+  <div class="card">
+    <button class="close" onclick="m(false)" aria-label="закрыть">✕</button>
+
+    <!-- экран 1: выбор -->
+    <div class="screen choice">
+      <div class="label">MVP King</div>
+      <h3>Как вам<br><span class="accent">удобнее?</span></h3>
+      <p>Напишите сами — или оставьте контакт, и я свяжусь с вами в течение дня.</p>
+      <button class="opt tg" onclick="alert('→ Telegram (заглушка)')">
+        <span>Написать в Telegram</span><span class="ar">→</span>
+      </button>
+      <button class="opt form" onclick="go('form')">
+        <span>Оставить заявку</span><span class="ar">→</span>
+      </button>
+    </div>
+
+    <!-- экран 2: форма -->
+    <form class="screen form" onsubmit="submitLead(event)">
+      <button type="button" class="back" onclick="go('choice')">← назад</button>
+      <div class="label">Заявка</div>
+      <h3>Расскажите<br><span class="accent">об идее.</span></h3>
+      <label class="field">
+        <span>Как вас зовут</span>
+        <input name="name" type="text" required placeholder="Имя" autocomplete="name" />
+      </label>
+      <label class="field">
+        <span>Контакт</span>
+        <input name="contact" type="text" required placeholder="Telegram, телефон или email" />
+      </label>
+      <label class="field">
+        <span>Пара слов об идее</span>
+        <textarea name="idea" rows="3" placeholder="Что хотите проверить?"></textarea>
+      </label>
+      <button class="opt tg" type="submit">
+        <span>Отправить заявку</span><span class="ar">→</span>
+      </button>
+    </form>
+
+    <!-- экран 3: спасибо -->
+    <div class="screen done">
+      <div class="check">✓</div>
+      <h3>Заявка<br><span class="accent">отправлена.</span></h3>
+      <p>Свяжусь с вами в течение дня. Обычно отвечаю быстрее.</p>
+      <button class="opt form" type="button" onclick="m(false)">
+        <span>Закрыть</span><span class="ar">→</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // спотлайт + параллакс строк (rAF-throttle)
+  let mx=innerWidth/2,my=innerHeight*0.3,raf=0;
+  const spot=document.querySelector('.spot'),lines=document.querySelectorAll('h1 .line'),cur=document.querySelector('.cursor');
+  addEventListener('mousemove',e=>{
+    mx=e.clientX;my=e.clientY;
+    cur.style.left=mx+'px';cur.style.top=my+'px';
+    if(!raf)raf=requestAnimationFrame(apply);
+  });
+  function apply(){
+    raf=0;
+    spot.style.setProperty('--mx',mx+'px');
+    spot.style.setProperty('--my',my+'px');
+    const dx=(mx/innerWidth-.5);
+    lines.forEach((l,i)=>{ l.style.transform=`translateX(${dx*(i+1)*14}px)`; });
+  }
+  // курсор крупнеет над кнопками
+  document.querySelectorAll('.btn').forEach(b=>{
+    b.addEventListener('mouseenter',()=>cur.classList.add('big'));
+    b.addEventListener('mouseleave',()=>cur.classList.remove('big'));
+  });
+  // модалка
+  const modal=document.getElementById('modal');
+  function m(s){
+    modal.classList.toggle('show',s);
+    if(s) go('choice');                 // всегда открываем с экрана выбора
+    else setTimeout(()=>{ go('choice'); modal.querySelector('.form')?.reset(); },200);
+  }
+  function go(screen){ modal.dataset.screen=screen; }
+  function submitLead(e){
+    e.preventDefault();
+    // ЗАГЛУШКА: тут будет реальная отправка заявки (бэк вне скоупа).
+    const data=Object.fromEntries(new FormData(e.target).entries());
+    console.log('[lead] заявка (заглушка):',data);
+    go('done');
+  }
+  document.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>m(true));
+  modal.addEventListener('click',e=>{if(e.target.id==='modal')m(false)});
+
+  // ===== fullPage-пейджинг: один скролл = плавный переезд на соседний экран =====
+  const sections=[...document.querySelectorAll('section')];
+  const MARQUEE=48;            // высота фиксированной бегущей строки
+  let cur_i=0, locking=false;  // текущий экран, замок на время анимации
+  function goTo(i){
+    i=Math.max(0,Math.min(sections.length-1,i));
+    if(i===cur_i||locking) return;
+    cur_i=i; locking=true;
+    const y=sections[i].offsetTop-(i===0?0:MARQUEE);
+    window.scrollTo({top:y,behavior:'smooth'});
+    setTimeout(()=>{locking=false;},850);  // блок новых скроллов пока едем
+  }
+  // колесо: перехватываем, едем на след/пред экран
+  addEventListener('wheel',e=>{
+    if(modal.classList.contains('show')) return;  // модалка — не трогаем
+    e.preventDefault();
+    if(locking) return;
+    goTo(cur_i + (e.deltaY>0?1:-1));
+  },{passive:false});
+  // клавиатура
+  addEventListener('keydown',e=>{
+    if(modal.classList.contains('show')) return;
+    if(['ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();goTo(cur_i+1);}
+    if(['ArrowUp','PageUp'].includes(e.key)){e.preventDefault();goTo(cur_i-1);}
+  });
+  // тач-свайпы
+  let ty=0;
+  addEventListener('touchstart',e=>{ty=e.touches[0].clientY;},{passive:true});
+  addEventListener('touchend',e=>{
+    if(modal.classList.contains('show'))return;
+    const dy=ty-e.changedTouches[0].clientY;
+    if(Math.abs(dy)>50) goTo(cur_i+(dy>0?1:-1));
+  },{passive:true});
+  // если пользователь оказался между экранами (ресайз и т.п.) — синхронизируем индекс
+  addEventListener('resize',()=>{cur_i=Math.round(window.scrollY/innerHeight);});
+</script>
+</body>
+</html>
