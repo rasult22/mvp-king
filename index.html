@@ -7,7 +7,8 @@
 <!--
   MVP King — лендинг. Один файл, 2 блока (fullPage-пейджинг).
   Стиль: кинетическая типографика, тёмная сцена, акцент #c6ff3a.
-  Живость: спотлайт за курсором + параллакс строк. Без 3D/WebGL.
+  Живость: Flow Field (canvas 2D — частицы на шумовом поле, вихрь под курсором),
+           спотлайт за курсором + параллакс строк. Без 3D/WebGL.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,8 +23,11 @@
     overflow-x:hidden;-webkit-font-smoothing:antialiased}
   button{font-family:inherit}
 
-  /* живой свет за курсором — концентрация на фоне */
-  .spot{position:fixed;inset:0;z-index:0;pointer-events:none;
+  /* Flow Field — частицы текут по псевдошумовому полю, курсор закручивает вихрь.
+     Адаптировано из .cc-design/frames/Backgrounds.html (canvas 2D, без либ). */
+  .flow{position:fixed;inset:0;z-index:0;pointer-events:none}
+  /* живой свет за курсором — мягкое усиление поверх потока */
+  .spot{position:fixed;inset:0;z-index:1;pointer-events:none;
     background:radial-gradient(600px circle at var(--mx,50%) var(--my,30%),
       rgba(198,255,58,.10), transparent 65%);transition:background .12s linear}
   /* grain */
@@ -152,6 +156,11 @@
     transition:border-color .2s,box-shadow .2s}
   #modal .field input::placeholder,#modal .field textarea::placeholder{color:#54573e}
   #modal .field input:focus,#modal .field textarea:focus{border-color:var(--acid);box-shadow:0 0 0 1px var(--acid)}
+  /* состояние ошибки */
+  #modal .field.invalid input,#modal .field.invalid textarea{border-color:#ff5a4d;box-shadow:0 0 0 1px #ff5a4d}
+  #modal .field .err{display:none;margin-top:7px;font-family:'Inter';font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;color:#ff6b5e}
+  #modal .field.invalid .err{display:block}
   #modal .form .opt{margin-top:6px}
   /* экран спасибо */
   #modal .done{text-align:left}
@@ -162,6 +171,7 @@
 </style>
 </head>
 <body>
+<canvas class="flow"></canvas>
 <div class="spot"></div>
 <div class="cursor"></div>
 
@@ -233,21 +243,24 @@
     </div>
 
     <!-- экран 2: форма -->
-    <form class="screen form" onsubmit="submitLead(event)">
+    <form class="screen form" onsubmit="submitLead(event)" novalidate>
       <button type="button" class="back" onclick="go('choice')">← назад</button>
       <div class="label">Заявка</div>
       <h3>Расскажите<br><span class="accent">об идее.</span></h3>
       <label class="field">
         <span>Как вас зовут</span>
-        <input name="name" type="text" required placeholder="Имя" autocomplete="name" />
+        <input name="name" type="text" placeholder="Имя" autocomplete="name" maxlength="80" />
+        <span class="err"></span>
       </label>
       <label class="field">
         <span>Контакт</span>
-        <input name="contact" type="text" required placeholder="Telegram, телефон или email" />
+        <input name="contact" type="text" placeholder="Telegram, телефон или email" maxlength="120" />
+        <span class="err"></span>
       </label>
       <label class="field">
         <span>Пара слов об идее</span>
-        <textarea name="idea" rows="3" placeholder="Что хотите проверить?"></textarea>
+        <textarea name="idea" rows="3" placeholder="Что хотите проверить?" maxlength="1000"></textarea>
+        <span class="err"></span>
       </label>
       <button class="opt tg" type="submit">
         <span>Отправить заявку</span><span class="ar">→</span>
@@ -267,6 +280,69 @@
 </div>
 
 <script>
+  // ===== Flow Field — фоновая анимация (адаптация из .cc-design/frames/Backgrounds.html) =====
+  // Частицы текут по полю псевдошума (сумма синусов, без либ); курсор закручивает вихрь.
+  (function flowField(){
+    if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;  // уважаем настройку
+    const canvas=document.querySelector('.flow'), ctx=canvas.getContext('2d');
+    const env={w:0,h:0,mouse:{x:0,y:0,inside:false}};
+    // DPR + ресайз: рисуем в CSS-пикселях, масштабируем под плотность экрана
+    function resize(){
+      const dpr=Math.min(devicePixelRatio||1,2);
+      env.w=innerWidth; env.h=innerHeight;
+      canvas.width=env.w*dpr; canvas.height=env.h*dpr;
+      canvas.style.width=env.w+'px'; canvas.style.height=env.h+'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.fillStyle='#0a0a0b'; ctx.fillRect(0,0,env.w,env.h);  // стартовый фон под трейлы
+    }
+    resize(); addEventListener('resize',resize);
+    addEventListener('mousemove',e=>{env.mouse.x=e.clientX;env.mouse.y=e.clientY;env.mouse.inside=true;});
+    addEventListener('mouseleave',()=>{env.mouse.inside=false;});
+
+    // дешёвый псевдошум через сумму синусов
+    const noise=(x,y,t)=>
+      Math.sin(x*0.0042+t*0.2)+
+      Math.sin(y*0.0049-t*0.15)+
+      Math.sin((x+y)*0.0031+t*0.1);
+    let parts=[];
+    const seed=()=>{
+      const N=Math.round((env.w*env.h)/2600);  // плотнее: вдвое больше частиц
+      parts=Array.from({length:N},()=>({x:Math.random()*env.w,y:Math.random()*env.h,life:Math.random()*100}));
+    };
+    seed();
+    let lw=env.w, lh=env.h;
+    function frame(now){
+      const t=now/1000, w=env.w, h=env.h, mouse=env.mouse;
+      if(w!==lw||h!==lh){ seed(); lw=w; lh=h; }
+      ctx.fillStyle='rgba(10,10,11,0.08)'; ctx.fillRect(0,0,w,h);  // лёгкое затухание трейлов
+      ctx.lineWidth=1;
+      for(const p of parts){
+        const a=noise(p.x,p.y,t)*Math.PI;
+        let vx=Math.cos(a), vy=Math.sin(a);
+        if(mouse.inside){
+          const R=300;                           // больший радиус захвата
+          const dx=p.x-mouse.x, dy=p.y-mouse.y, d=Math.hypot(dx,dy);
+          if(d<R&&d>0.1){                         // тангенциальный вихрь вокруг курсора
+            const f=(1-d/R);
+            vx+=(-dy/d)*f*4.5; vy+=(dx/d)*f*4.5;  // сильнее закрутка
+          }
+        }
+        const nx=p.x+vx*1.6, ny=p.y+vy*1.6;
+        const near=mouse.inside?Math.max(0,1-Math.hypot(p.x-mouse.x,p.y-mouse.y)/320):0;
+        ctx.strokeStyle=near>0.05
+          ? 'rgba(198,255,58,'+(0.25+near*0.6)+')'   // у курсора — акцент #c6ff3a
+          : 'rgba(122,127,102,0.32)';                // вдали — приглушённый оливковый
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(nx,ny); ctx.stroke();
+        p.x=nx; p.y=ny; p.life--;
+        if(p.life<0||p.x<0||p.x>w||p.y<0||p.y>h){  // респаун выбывших частиц
+          p.x=Math.random()*w; p.y=Math.random()*h; p.life=60+Math.random()*100;
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+
   // спотлайт + параллакс строк (rAF-throttle)
   let mx=innerWidth/2,my=innerHeight*0.3,raf=0;
   const spot=document.querySelector('.spot'),lines=document.querySelectorAll('h1 .line'),cur=document.querySelector('.cursor');
@@ -292,15 +368,71 @@
   function m(s){
     modal.classList.toggle('show',s);
     if(s) go('choice');                 // всегда открываем с экрана выбора
-    else setTimeout(()=>{ go('choice'); modal.querySelector('.form')?.reset(); },200);
+    else setTimeout(()=>{ go('choice'); modal.querySelector('.form')?.reset(); modal.querySelectorAll('.field.invalid').forEach(f=>f.classList.remove('invalid')); },200);
   }
   function go(screen){ modal.dataset.screen=screen; }
-  function submitLead(e){
+  const PB_URL='https://rasult22.pockethost.io';
+
+  // ===== валидация формы заявки =====
+  function setErr(input,msg){
+    const field=input.closest('.field');
+    field.classList.toggle('invalid',!!msg);
+    field.querySelector('.err').textContent=msg||'';
+  }
+  function checkField(input){
+    const v=input.value.trim();
+    if(input.name==='name'){
+      if(!v) return 'Укажите имя';
+      if(v.length<2) return 'Слишком короткое имя';
+    }
+    if(input.name==='contact'){
+      if(!v) return 'Укажите контакт';
+      const isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      const isPhone=/^\+?[\d\s().-]{7,}$/.test(v);
+      const isTg=/^@?[a-zA-Z0-9_]{4,}$/.test(v);
+      if(!isEmail&&!isPhone&&!isTg) return 'Введите email, телефон или @telegram';
+    }
+    return ''; // idea — необязательное
+  }
+  function validateLead(form){
+    let firstBad=null;
+    form.querySelectorAll('input,textarea').forEach(input=>{
+      const msg=checkField(input);
+      setErr(input,msg);
+      if(msg&&!firstBad) firstBad=input;
+    });
+    if(firstBad) firstBad.focus();
+    return !firstBad;
+  }
+  // очищаем ошибку поля, как только пользователь его правит
+  document.querySelectorAll('#modal .form input,#modal .form textarea').forEach(input=>{
+    input.addEventListener('input',()=>{ if(input.closest('.field').classList.contains('invalid')) setErr(input,checkField(input)); });
+  });
+
+  async function submitLead(e){
     e.preventDefault();
-    // ЗАГЛУШКА: тут будет реальная отправка заявки (бэк вне скоупа).
-    const data=Object.fromEntries(new FormData(e.target).entries());
-    console.log('[lead] заявка (заглушка):',data);
-    go('done');
+    const form=e.target;
+    if(!validateLead(form)) return;
+    const btn=form.querySelector('button[type="submit"]');
+    const label=btn.querySelector('span');
+    const data=Object.fromEntries(new FormData(form).entries());
+    btn.disabled=true; const prev=label.textContent; label.textContent='Отправляю…';
+    try{
+      const res=await fetch(`${PB_URL}/api/collections/projects/records`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data),
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      go('done');
+    }catch(err){
+      console.error('[lead] ошибка отправки:',err);
+      label.textContent='Ошибка — попробуйте ещё раз';
+      setTimeout(()=>{label.textContent=prev;},2500);
+    }finally{
+      btn.disabled=false;
+      if(modal.dataset.screen!=='done') label.textContent=prev;
+    }
   }
   document.querySelectorAll('[data-cta]').forEach(b=>b.onclick=()=>m(true));
   modal.addEventListener('click',e=>{if(e.target.id==='modal')m(false)});
