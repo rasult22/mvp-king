@@ -3,9 +3,37 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MVP King — Проверьте свою идею за $2000</title>
+
+<!-- ===== SEO ===== -->
+<title>MVP за $2000 — проверьте свою идею</title>
+<meta name="description" content="Соберу рабочий MVP вашего продукта за $2000 и 2–3 недели: веб, бэкенд, мобилка, ИИ. Один человек — весь срез продукта. Оставьте заявку." />
+<meta name="theme-color" content="#0a0a0b" />
+<!-- TODO: заменить https://example.com на реальный домен (canonical, og:url, og:image) -->
+<link rel="canonical" href="https://example.com/" />
+
+<!-- Open Graph (превью в Telegram, WhatsApp, соцсетях) -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MVP за $2000" />
+<meta property="og:title" content="MVP за $2000 — проверьте свою идею" />
+<meta property="og:description" content="Соберу рабочий MVP вашего продукта за $2000 и 2–3 недели. Один человек — весь срез продукта." />
+<meta property="og:url" content="https://example.com/" />
+<meta property="og:image" content="https://example.com/og-cover.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="MVP за $2000 — проверьте свою идею" />
+<meta property="og:locale" content="ru_RU" />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="MVP за $2000 — проверьте свою идею" />
+<meta name="twitter:description" content="Соберу рабочий MVP вашего продукта за $2000 и 2–3 недели. Один человек — весь срез продукта." />
+<meta name="twitter:image" content="https://example.com/og-cover.png" />
+
+<!-- favicon: кислотный «K» на тёмном фоне (inline SVG, без отдельного файла) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0a0b'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='22' font-weight='700' fill='%23c6ff3a' text-anchor='middle'%3EK%3C/text%3E%3C/svg%3E" />
+
 <!--
-  MVP King — лендинг. Один файл, 2 блока (fullPage-пейджинг).
+  Лендинг. Один файл, 2 блока (fullPage-пейджинг).
   Стиль: кинетическая типографика, тёмная сцена, акцент #c6ff3a.
   Живость: Flow Field (canvas 2D — частицы на шумовом поле, вихрь под курсором),
            спотлайт за курсором + параллакс строк. Без 3D/WebGL.
@@ -126,7 +154,7 @@
   #modal p{font-family:'Inter';color:#7c7f66;font-size:14px;line-height:1.5;margin-bottom:28px}
   /* опции — скошенные кнопки как CTA */
   #modal .opt{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
-    margin-bottom:14px;padding:16px 22px;cursor:pointer;border:0;
+    margin-bottom:14px;padding:16px 22px;cursor:pointer;border:0;text-decoration:none;
     font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;text-transform:uppercase;letter-spacing:.02em;
     transform:skewX(-10deg);transition:box-shadow .35s,transform .35s,padding .35s}
   #modal .opt > *{transform:skewX(10deg);font-family:'Space Grotesk',sans-serif}
@@ -182,7 +210,7 @@
 
 <!-- блок 1 -->
 <section class="hero">
-  <div class="kick">MVP King</div>
+  <div class="kick">MVP за 2–3 недели</div>
   <h1>
     <span class="line">Проверьте свою</span>
     <span class="line">идею за <span class="accent">$2000.</span></span>
@@ -209,7 +237,7 @@
 <!-- блок 2 -->
 <section class="b2">
   <h2>Давайте<br><span class="accent">обсудим.</span></h2>
-  <p class="sub">У вас есть идея — у меня есть способ проверить её на реальном продукте за $2000. Дальше решим на созвоне.</p>
+  <p class="sub">У вас есть идея — за $2000 я соберу из неё рабочий MVP. Детали обсудим на созвоне.</p>
   <button class="btn" data-cta>
     <span>Связаться</span>
     <span class="arrows">
@@ -231,12 +259,12 @@
 
     <!-- экран 1: выбор -->
     <div class="screen choice">
-      <div class="label">MVP King</div>
+      <div class="label">Заявка</div>
       <h3>Как вам<br><span class="accent">удобнее?</span></h3>
       <p>Напишите сами — или оставьте контакт, и я свяжусь с вами в течение дня.</p>
-      <button class="opt tg" onclick="alert('→ Telegram (заглушка)')">
+      <a class="opt tg" href="https://t.me/rasult22js" target="_blank" rel="noopener">
         <span>Написать в Telegram</span><span class="ar">→</span>
-      </button>
+      </a>
       <button class="opt form" onclick="go('form')">
         <span>Оставить заявку</span><span class="ar">→</span>
       </button>
